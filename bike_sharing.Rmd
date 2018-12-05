@@ -1,5 +1,5 @@
 ---
-title: 'Bike Sharing: EDA'
+title: 'Bike Sharing Analytics'
 output: word_document
 ---
 
@@ -154,7 +154,7 @@ The highest mean, median and standard deviation values of total number of bike r
 summary(aov(count ~ season, data = hour))
 ```
 
-The analysis of variance model demonstrates that number of bike rentals and season are significantly correlated (p-value = 2e-16).
+The analysis of variance model demonstrates that number of bike rentals and season are significantly correlated (p-value < 2e-16).
 
 ```{r}
 #Pairwise comparison of means for seasons
@@ -189,7 +189,7 @@ test2 <- cor.test(hour$atemp[hour$year == 2012],
 test2
 ```
 
-The correlation tests demonstrate a significant correlation between the felt air temperature and the number of bike rents for both years (p-value = 2.2e-16 in both observations). The correlation coefficients differ for 2011 (0.4470294) and for 2012 (0.3963925).
+The correlation tests demonstrate a significant correlation between the felt air temperature and the number of bike rents for both years (p-value < 2.2e-16 in both observations). The correlation coefficients differ for 2011 (0.4470294) and for 2012 (0.3963925).
 
 ```{r}
 #scatterplot with regression lines
@@ -278,6 +278,23 @@ ggplot(hour, aes(x=workingday, y=count, fill=workingday)) +
 
 According to the independent 2-group t-test, there is a significant difference between the total bike rentals on weekends and holidays versus on working days (p=value = 4.249e-05). The boxplots show that the median number of rentals is higher on working days than on non-working days. However, the boxplot for non-working days exhibits a different distribution with a smaller lower quartile range. 
 
+```{r}
+#Is there a significe between total number bike rentals and hour rented?
+
+tTest2 <- t.test(hour$count, hour$hr)
+tTest2
+```
+
+```{r}
+hour$hr <- factor(hour$hr, c(0:23))
+
+ggplot(hour, aes(x=hr, y=count)) +
+  labs(title="Boxplots of Bike Rentals by Hour", x = "Hour", y = "Number of Rentals")+
+  geom_boxplot(notch=TRUE)
+```
+
+According to the independent 2-group t-test, there is a significant difference between the total bike rentals and hour rented (p=value < 2.2e-16). The boxplots show that the median number of rentals is higher between 6:00 am and 7:00 am, and between 4:00 pm and 7:00 pm. We also observe high outliers for number of bikes rented during the middle of the day (between 9:00 am and 3:00 pm).
+
 EDA key take-aways:
 
 1. Temperatures vary significantly between seasons.
@@ -288,4 +305,4 @@ EDA key take-aways:
 
 4. There is also a significant relationship between all weather conditions, with the exception of weather condition 4, and total number of bike rentals. Weather condition 4 had an extremely low number of observations which likely contributed to those results. The two most popular weather conditions are 1 and 2 (Clear and Cloudy).
 
-5. There is a significant relationship between number of total bike rentals and type of day.
+5. There is a significant relationship between the number of total bike rentals, and type of day and hour. We may conclude that most bike rentals occur during working days during the morning and evening commutes. 
