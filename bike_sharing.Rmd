@@ -1,0 +1,291 @@
+---
+title: 'Bike Sharing: EDA'
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+hour <- read.csv(file="hour.csv", header=TRUE, sep=",")
+```
+
+
+```{r}
+summary(hour)
+```
+```{r}
+ncol(hour)
+```
+```{r}
+nrow(hour)
+```
+```{r}
+names(hour)
+```
+```{r}
+#Recode season values from 1-4 to Spring-Winter
+
+recodev <- function(original.vector, 
+                    old.values, 
+                    new.values) {
+  new.vector <- original.vector
+  for (i in 1:length(old.values)) {
+    change.log <- original.vector == old.values[i] & 
+      is.na(original.vector) == F
+    new.vector[change.log] <- new.values[i] 
+    
+  }
+  return(new.vector)
+}
+
+hour$season <- recodev(original.vector = hour$season,
+           old.values = c(1:4),
+           new.values = c("spring","summer","fall",
+                          "winter"))
+```
+
+```{r}
+#Rename columns yr and mnth on year and month and recode year values (0: 2011, 1:2012)
+
+names(hour)[4:5] <- c("year","month")
+hour$year <- recodev(original.vector = hour$year,
+           old.values = c(0,1),
+           new.values = c(2011,2012))
+names(hour)
+```
+
+```{r}
+#Rename hum on humidity and cnt on count
+
+names(hour)[names(hour)=="hum"] <- "humidity"
+names(hour)[names(hour)=="cnt"] <- "count"
+names(hour)
+```
+
+```{r}
+#Denormalise temp and atemp
+
+tconvert <- function(min, max, vector){
+  result <- vector * (max - min) + min
+  return (result)
+}
+
+hour$temp <- tconvert(-8, 39, hour$temp)
+hour$atemp <- tconvert(-16, 50, hour$atemp)
+```
+
+```{r}
+#Convert temperature from Celcius to Fahrenheit
+
+library(weathermetrics)
+hour$temp <- celsius.to.fahrenheit(hour$temp)
+hour$atemp <- celsius.to.fahrenheit(hour$atemp)
+```
+
+```{r}
+#How does temperature change over seasons? What is the mean, standard deviation and median of temperatures for each season?
+
+library(dplyr)
+hour.agg <- hour %>%
+  group_by(season) %>%
+  summarise(
+    temp.min = min(temp),
+    temp.max = max(temp),
+    temp.med = median(temp),
+    temp.stdev = sd(temp),
+    temp.mean = mean(temp), 
+    count = n())
+hour.agg
+```
+
+```{r}
+#Boxplots temperature by season
+
+library(ggplot2)
+ggplot(hour, aes(x=season, y=temp, fill=season)) +
+  labs(title="Boxplots Temperature by Season",x="Season", y = "Temperature")+
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=4)
+```
+
+According to the data table and boxplots above, the lowest minimum temperature as well as the minimum mean temperature occur during the spring months (19.29 F and 42.91 respectively). The maximum temperature and the maximum mean temperature occur during the fall months (102.20 F and 77.36 F respectively). The boxplots clearly demonstrate that the lowest temperatures occur most commonly in the spring time, and that spring also sees significant high temperature outliers. The highest temperatures occur during the fall with both high and low temperature outliers.
+
+```{r}
+#Which weather conditions exhibit the lowet/highest number of total bike rentals?
+
+hour$weathersit <- factor(hour$weathersit, labels = c("1", "2", "3", "4"))
+
+ggplot(hour, aes(x=weathersit, y=count)) +
+  labs(title="Violin Plots of Bike Rentals by Weather Condition",x="Weather Condition", y = "Number of Rentals")+
+  geom_violin(trim=FALSE, fill='#A4A4A4', color="darkred")+
+  stat_summary(fun.y=mean, geom="point", size=2, color="black")
+```
+
+According to the violin plot above, the lowest number of rentals occur during weather condition 4 (Heavy Rain, Ice Pallets, Thunderstorm, Mist, Snow, and Fog). The highest mean number of rentals occur during weather condition 1 (Clear, Few clouds, Partly cloudy, and Partly cloudy).
+
+```{r}
+#Is there a correlation between the total number of rentals and season? What is the mean, median and standard deviation for total number of rentals (count) per season? Which season is the most popular for the bike rentals?
+
+hour_df <- data.frame(fall = rep(NA, 3),
+                      spring = rep(NA, 3),
+                      summer = rep(NA, 3),
+                      winter = rep(NA, 3))
+row.names(hour_df) <- c("mean", "median", "sd")
+
+vec <- c("mean","median","sd") 
+for (n in vec){
+  for (i in unique(hour$season)) {
+    my.fun <- get(n)
+    res <- my.fun(hour$count[hour$season == i])
+    hour_df[n,i] <- res
+  }
+}  
+hour_df
+```
+
+The highest mean, median and standard deviation values of total number of bike rentals belong to the fall season (236.0162, 199, and 197.7116 respectively), while the lowest values belong to the spring season (111.1146, 76 and 119.224 respectively).
+
+```{r}
+#Analysis of variance model
+
+summary(aov(count ~ season, data = hour))
+```
+
+The analysis of variance model demonstrates that number of bike rentals and season are significantly correlated (p-value = 2e-16).
+
+```{r}
+#Pairwise comparison of means for seasons
+
+TukeyHSD(aov(count ~ season, data = hour))
+```
+
+The Tukey Honest Significant Difference (HSD) method controls for the Type I error rate across multiple comparisons and is generally considered an acceptable technique. This pairwise comparison of means analysis shows us that the most significant difference in total number of bike rentals is between the spring and fall seasons ( approximately -124.9), while the least significant means values difference occurs between winter and summer.
+
+```{r}
+#Boxplots count by season
+
+ggplot(hour, aes(x=season, y=count, fill=season)) +
+  labs(title="Boxplots Number of Bike Rentals by Season",x="Season", y = "Number of Rentals")+
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=4)
+```
+
+The boxplots display the most popular season for renting a bike as fall and the least popular season as summer. Additionally, all four seasons exhibit high outliers for number of bikes rented.
+
+```{r}
+#Is the correlation between feeling temperature (atemp) and number of bike rentals significant? Is there a difference between the correlations for years 2011 and 2012?
+
+test1 <- cor.test(hour$atemp[hour$year == 2011],
+               hour$count[hour$year == 2011])
+test1
+```
+
+```{r}
+test2 <- cor.test(hour$atemp[hour$year == 2012], 
+               hour$count[hour$year == 2012])
+test2
+```
+
+The correlation tests demonstrate a significant correlation between the felt air temperature and the number of bike rents for both years (p-value = 2.2e-16 in both observations). The correlation coefficients differ for 2011 (0.4470294) and for 2012 (0.3963925).
+
+```{r}
+#scatterplot with regression lines
+
+plot(x = 1, xlab = "Feeling Temperature", ylab = "Number of Bike Rentals", xlim = c(0,120), ylim = c(0,1000), main = "Feeling Temperature vs. Number of Bike Rentals")
+points(x = hour$atemp[hour$year == 2011], y = hour$count[hour$year == 2011], pch = 19, col = "red", cex = 0.5)
+points(x = hour$atemp[hour$year == 2012], y = hour$count[hour$year == 2012], pch = 19, col = "black", cex = 0.5)
+abline(lm(count~atemp, hour, subset = year == 2011), col = "black", lwd = 3)
+abline(lm(count~atemp, hour, subset = year == 2012), col = "red", lwd = 3)
+legend("topleft", legend = c(2011, 2012), col = c("black","red"), pch = c(19, 19), bg = "white", cex = 1)
+```
+
+The scatterplot with  regression lines for both years demonstrates the difference between the correlation for 2011 and 2012 years. We also conclude that feeling temperatire and number of bike rentals have a higher correlation for 2011, than for 2012. 
+
+```{r}
+#Is weather condition correlated to number of bike rentals? What are the summary statistics for each weather condition? How does weather condition influence the distribution of bike rentals?
+
+lm1 <- lm(count~weathersit, hour)
+summary(lm1)
+```
+
+There is a significant correlation between all weather conditions, except for weather conditions 4, and number of bike rentals. 
+
+```{r}
+w.agg <- hour %>%
+  group_by(weathersit) %>%
+  summarise(
+    temp.min = min(temp),
+    temp.max = max(temp),
+    temp.mean = mean(temp),
+    temp.stdev = sd(temp),
+    temp.med = median(temp), 
+    count = n())
+w.agg
+```
+
+The aggregation results show that the minimum temperatures for weather conditions 1 and 2 are the same (19.29 F). The highest maximum temperature occurs during weather condition 1 (102.20 F). The lowest temperature for all estimated parameters is for weather condition 4 and it's the most rare weather condition in the whole dataset (only 3 observations), while the most often one is for weather condition 1 (11413 observations).
+
+```{r}
+#Histogram for each weather condition
+
+vec <- c("Clear Weather", "Cloudy Weather", "Light Rain Weather", "Heavy Rain/Snowy Weather")
+par(mfrow = c(2, 2))
+
+for (i in c(1:4)){
+  name.i <- vec[i]
+  hist(hour$count[hour$weathersit == i],
+     main = name.i,
+     xlab = "Number of Rents",
+     ylab = "Frequency",
+     breaks = 10,
+     col = "grey",
+     border = "black")
+  
+# the line indicating median value
+abline(v = median(hour$count[hour$weathersit == i]),
+       col = "black", 
+       lwd = 3, 
+       lty = 2) 
+
+# the line indicating mean value
+abline(v = mean(hour$count[hour$weathersit == i]),
+       col = "blue", 
+       lwd = 3, 
+       lty = 2) 
+}
+
+```
+
+```{r}
+#Is there a significant difference between total number bike rentals on holidays and working days?
+
+tTest1 <- t.test(hour$count[hour$workingday == 1],
+       hour$count[hour$workingday == 0])
+tTest1
+```
+
+```{r}
+hour$workingday <- factor(hour$workingday, c(1, 0))
+
+ggplot(hour, aes(x=workingday, y=count, fill=workingday)) +
+  labs(title="Boxplots of Bike Rentals by Type of Day", x = "Type of Day", y = "Number of Rentals")+
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=4)
+```
+
+According to the independent 2-group t-test, there is a significant difference between the total bike rentals on weekends and holidays versus on working days (p=value = 4.249e-05). The boxplots show that the median number of rentals is higher on working days than on non-working days. However, the boxplot for non-working days exhibits a different distribution with a smaller lower quartile range. 
+
+EDA key take-aways:
+
+1. Temperatures vary significantly between seasons.
+
+2. Number of total bike rentals change depending on weather condition. The most significant pairwise mean difference occurs for spring and fall seasons, while the least significant occurs for winter and summer.
+
+3. There is a significant relationship between feeling temperature and the total number of bike rentals, although it differs for two represented years.
+
+4. There is also a significant relationship between all weather conditions, with the exception of weather condition 4, and total number of bike rentals. Weather condition 4 had an extremely low number of observations which likely contributed to those results. The two most popular weather conditions are 1 and 2 (Clear and Cloudy).
+
+5. There is a significant relationship between number of total bike rentals and type of day.
