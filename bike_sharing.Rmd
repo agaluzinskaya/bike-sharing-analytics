@@ -319,25 +319,35 @@ library(corrplot)
 corrplot(train_cor, method = 'color', addCoef.col="black")
 ```
 ```{r}
-lm_hour <- lm(count ~ humidity+casual+registered, data=hour)
-summary(lm_hour)
+lm1 <- lm(count ~ season + holiday + weathersit + temp + atemp + humidity, data = hour)
+summary(lm1)
 
 ```
 
-Based on the correlation matrix of numeric variables, humidity, casual, and registered show a strong enough coorelation with count. The variable humidity, has a weak negative relationship with count. While casual and registered both have a strong linear relationship with count. According to the p-values in the linear regression model, the predictor variables humidity, casual, and registered all have highly significant p-values < 0.05. With an adjusted $R^2$ of 1, which indicates perfect fit and that all variance has been explained. 
+Based on the correlation matrix of numeric variables, temp, atemp, humidity, casual, and registered show a strong enough coorelation with count. The variable humidity, has a weak negative relationship with count. Variables temp and atemp have a possitive weak relationship with count. While casual and registered both have a strong linear relationship with count. The first linear model was fit with all the aforementioned numeric variables, with the exception of count and registered as those represent count data. According to the p-values in the first linear regression model, all predictor variables with the exception of atemp are significant. We fit the second linear model without atemp.
+
+```{r}
+lm2 <- lm(count ~ season + holiday + weathersit + temp + humidity, data = hour)
+summary(lm2)
+```
 
 ```{r}
 par(mfrow=c(2,2))
-plot(lm_hour)
+plot(lm2)
 ```
 
-The residuals vs. fitted plot above the plot it not distributed vertically, and there are visible outliers. Since we cannot detect a clear pattern or trend, the linear model has some room for improvement. 
+All the predictor variables in the second linear model appear to be significant. However, the adjusted $R^2$ value does not appear to have improved. In the residuals vs fitted plot above, there is no linear trend as some predictions are too high and some are too low. We will attempt a log transformation of the outcome variable to improve the linear model
 
 ```{r}
+lm3 <- lm(log(count) ~ season + holiday + weathersit + temp + humidity, data = hour)
+summary(lm3)
 
 ```
 
 ```{r}
-
+par(mfrow=c(2,2))
+plot(lm3)
 ```
+
+The third linear model with log trasformation of the outcome variable, does not see an improvement in the adjusted $R^2$. The residuals vs. fitted plot still appears to be unhealthy with no clear patterns. We may conclude that our data is not normally distributed and that linear models are not good for this analysis. 
 
