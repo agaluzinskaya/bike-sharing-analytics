@@ -260,21 +260,21 @@ abline(v = mean(hour$count[hour$weathersit == i]),
 ```{r}
 #Is there a significant difference between total number bike rentals on holidays and working days?
 
-tTest1 <- t.test(hour$count[hour$workingday == 1],
-       hour$count[hour$workingday == 0])
+tTest1 <- t.test(hour$count[hour$holiday == 0],
+       hour$count[hour$holiday == 1])
 tTest1
 ```
 
 ```{r}
-hour$workingday <- factor(hour$workingday, c(1, 0))
+hour$holiday <- factor(hour$holiday, c(0, 1))
 
-ggplot(hour, aes(x=workingday, y=count, fill=workingday)) +
+ggplot(hour, aes(x=holiday, y=count, fill=holiday)) +
   labs(title="Boxplots of Bike Rentals by Type of Day", x = "Type of Day", y = "Number of Rentals")+
   geom_boxplot(outlier.colour="red", outlier.shape=8,
                 outlier.size=4)
 ```
 
-According to the independent 2-group t-test, there is a significant difference between the total bike rentals on weekends and holidays versus on working days (p=value = 4.249e-05). The boxplots show that the median number of rentals is higher on working days than on non-working days. However, the boxplot for non-working days exhibits a different distribution with a smaller lower quartile range. 
+According to the independent 2-group t-test, there is a significant difference between the total bike rentals on holidays versus on working days (p=value = p-value = 3.398e-06). The boxplots show that the median number of rentals is higher on working days than on holidays. 
 
 ```{r}
 #Is there a significe between total number bike rentals and hour rented?
@@ -310,7 +310,7 @@ EDA key take-aways:
 
 hour$year <- factor(hour$year, levels=c(0, 1), labels=c("2011", "2012"))
 hour$month <- factor(hour$month, levels=c(1,2,3,4,5,6,7,8,9,10,11,12))
-hour$holiday <- factor(hour$holiday, levels=c(0, 1))
+hour$workingday <- factor(hour$workingday, levels=c(0, 1))
 hour$weekday <- factor(hour$weekday, levels=c(1,2,3,4,5,6,7))
 
 train_cor <- cor(hour[sapply(hour, is.numeric)], use='pairwise')
