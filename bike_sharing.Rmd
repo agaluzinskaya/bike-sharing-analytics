@@ -66,15 +66,13 @@ names(hour)
 ```
 
 ```{r}
-#Denormalise temp and atemp
+#Denormalise variables
 
-tconvert <- function(min, max, vector){
-  result <- vector * (max - min) + min
-  return (result)
-}
-
-hour$temp <- tconvert(-8, 39, hour$temp)
-hour$atemp <- tconvert(-16, 50, hour$atemp)
+hour$temp <- hour$temp*41
+hour$atemp <- hour$atemp*50
+hour$windspeed <- hour$windspeed*67
+hour$humidity <- hour$humidity*100
+str(hour)
 ```
 
 ```{r}
@@ -111,7 +109,7 @@ ggplot(hour, aes(x=season, y=temp, fill=season)) +
                 outlier.size=4)
 ```
 
-According to the data table and boxplots above, the lowest minimum temperature as well as the minimum mean temperature occur during the spring months (19.29 F and 42.91 respectively). The maximum temperature and the maximum mean temperature occur during the fall months (102.20 F and 77.36 F respectively). The boxplots clearly demonstrate that the lowest temperatures occur most commonly in the spring time, and that spring also sees significant high temperature outliers. The highest temperatures occur during the fall with both high and low temperature outliers.
+According to the data table and boxplots above, the lowest minimum temperature as well as the minimum mean temperature occur during the spring months (33.48 F and 52.66 respectively). The maximum temperature and the maximum mean temperature occur during the fall months (105.80 F and 83.66 F respectively). The boxplots clearly demonstrate that the lowest temperatures occur most commonly in the spring time, and that spring also sees significant high temperature outliers. The highest temperatures occur during the fall with both high and low temperature outliers.
 
 ```{r}
 #Which weather conditions exhibit the lowet/highest number of total bike rentals?
@@ -306,3 +304,21 @@ EDA key take-aways:
 4. There is also a significant relationship between all weather conditions, with the exception of weather condition 4, and total number of bike rentals. Weather condition 4 had an extremely low number of observations which likely contributed to those results. The two most popular weather conditions are 1 and 2 (Clear and Cloudy).
 
 5. There is a significant relationship between the number of total bike rentals, and type of day and hour. We may conclude that most bike rentals occur during working days during the morning and evening commutes. 
+
+```{r}
+#Correlation matrix between all the variables
+
+hour$year <- factor(hour$year, levels=c(0, 1), labels=c("2011", "2012"))
+hour$month <- factor(hour$month, levels=c(1,2,3,4,5,6,7,8,9,10,11,12))
+hour$holiday <- factor(hour$holiday, levels=c(0, 1))
+hour$weekday <- factor(hour$weekday, levels=c(1,2,3,4,5,6,7))
+
+cor(hour[sapply(hour, is.numeric)], use='pairwise')
+```
+```{r}
+lm_hour <- lm(count ~ humidity+casual+registered, data=hour)
+summary(lm_hour)
+
+```
+
+Based on the correlation matrix of numeric variables, humidity, casual, and registered are highly coorelated with count. According to the p-values in the linear regression model, the predictor variables humidity, casual, and registered all have highly significant p-values < 0.05. With an adjusted $R^2$ of 1, which indicates perfect fit and that all variance has been explained. 
